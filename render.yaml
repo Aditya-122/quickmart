@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: quickmart
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ES_HOST
+        sync: false          # Set manually in Render dashboard (your Bonsai URL)
+      - key: OPENAI_API_KEY
+        sync: false          # Set manually in Render dashboard
+      - key: ES_INDEX
+        value: products
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: FRONTEND_ORIGIN
+        value: "*"
