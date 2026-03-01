@@ -214,18 +214,17 @@ async def search_products(
         in_stock=in_stock,
     )
 
-    body = _build_query(q, filters, sort_by)
+    search_body = _build_query(q, filters, sort_by)
     from_offset = (page - 1) * page_size
 
-    kwargs: dict[str, Any] = {
-        "index": INDEX_NAME,
-        "from_": from_offset,
-        "size": page_size,
-        **body,
-    }
-    # Apply min_score only when a text query is present to filter low-confidence matches.
+    # Apply min_score inside the body — required by ES 7.x client (body= style).
     if q and q.strip():
-        kwargs["min_score"] = MIN_SCORE_WITH_QUERY
+        search_body["min_score"] = MIN_SCORE_WITH_QUERY
 
-    response = await es.search(**kwargs)
+    response = await es.search(
+        index=INDEX_NAME,
+        body=search_body,
+        from_=from_offset,
+        size=page_size,
+    )
     return _format_response(dict(response), page=page, page_size=page_size)

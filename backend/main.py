@@ -187,34 +187,36 @@ async def suggest(
     try:
         response = await es.search(
             index=INDEX_NAME,
-            query={
-                "bool": {
-                    "should": [
-                        # Primary: prefix match via edge n-gram index on product name.
-                        # At index time "Amul Butter" → tokens ["am","amu","amul","bu","but",...].
-                        # autocomplete_search_analyzer splits the query into whole words,
-                        # which are then matched against those n-gram tokens.
-                        {
-                            "match": {
-                                "name": {
-                                    "query": q,
-                                    "analyzer": "autocomplete_search_analyzer",
-                                    "boost": 2,
+            body={
+                "query": {
+                    "bool": {
+                        "should": [
+                            # Primary: prefix match via edge n-gram index on product name.
+                            # At index time "Amul Butter" → tokens ["am","amu","amul","bu","but",...].
+                            # autocomplete_search_analyzer splits the query into whole words,
+                            # which are then matched against those n-gram tokens.
+                            {
+                                "match": {
+                                    "name": {
+                                        "query": q,
+                                        "analyzer": "autocomplete_search_analyzer",
+                                        "boost": 2,
+                                    }
                                 }
-                            }
-                        },
-                        # Secondary: brand exact match (case-insensitive via lowercase keyword).
-                        # "amul" → shows all Amul products at the top.
-                        {
-                            "term": {
-                                "brand": {
-                                    "value": q.lower(),
-                                    "boost": 3,
+                            },
+                            # Secondary: brand exact match (case-insensitive via lowercase keyword).
+                            # "amul" → shows all Amul products at the top.
+                            {
+                                "term": {
+                                    "brand": {
+                                        "value": q.lower(),
+                                        "boost": 3,
+                                    }
                                 }
-                            }
-                        },
-                    ],
-                    "minimum_should_match": 1,
+                            },
+                        ],
+                        "minimum_should_match": 1,
+                    }
                 }
             },
             size=7,

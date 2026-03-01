@@ -69,12 +69,7 @@ async def delete_index(es: AsyncElasticsearch) -> None:
 
 
 async def create_index(es: AsyncElasticsearch) -> None:
-    # Pass settings and mappings as direct kwargs — avoids deprecated body= param in ES 8.x
-    await es.indices.create(
-        index=INDEX_NAME,
-        settings=INDEX_MAPPING["settings"],
-        mappings=INDEX_MAPPING["mappings"],
-    )
+    await es.indices.create(index=INDEX_NAME, body=INDEX_MAPPING)
     print(f"Created index: {INDEX_NAME}")
 
 
@@ -85,7 +80,7 @@ async def bulk_index_products(es: AsyncElasticsearch) -> int:
         operations.append({"index": {"_index": INDEX_NAME, "_id": product["id"]}})
         operations.append(product)
 
-    response = await es.bulk(operations=operations, refresh=True)
+    response = await es.bulk(body=operations, refresh=True)
 
     if response.get("errors"):
         errors = [
