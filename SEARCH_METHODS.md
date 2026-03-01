@@ -150,6 +150,9 @@ Once the search fires, Elasticsearch runs **5 different matching strategies at t
 **Why we target word-level, not character-fragment-level:**
 An early bug was that typing `"amul"` matched "Domex Multi-Purpose" because the letters `m-u-l` appear inside the word "Multi". We fixed this by making the typo check work on complete words only. So "amul" is now compared against whole words like "Domex", "Multi", "Purpose" — none of which are close enough.
 
+**Multi-word protection (`minimum_should_match: "60%"`):**
+For a multi-word query like `"Maggi Masala Noodles"` (3 words), at least 60% of those words — meaning 2 out of 3 — must match in the same product. This stopped a bug where searching "Maggi Masala Noodles" returned Lays Magic Masala (only 1 word, "Masala", matched). 60% means you need a real match, not an accidental one.
+
 ---
 
 #### Strategy 3 — Prefix / Autocomplete Match
@@ -162,6 +165,8 @@ An early bug was that typing `"amul"` matched "Domex Multi-Purpose" because the 
 - Think of Google's autocomplete, but for product names
 
 **How it's set up:** At index time (when Seed Data runs), the app pre-generates all possible prefixes of each product name and stores them. "Amul Butter" gets stored as "Am", "Amu", "Amul", "Bu", "But", "Butt", "Butte", "Butter". When you type "am", it instantly finds all products that have "am" as a stored prefix.
+
+**Multi-word protection:** Same `minimum_should_match: "60%"` rule applies. Typing `"maggi masala"` won't return every product that starts with "ma" — both words need a prefix hit in the same product.
 
 ---
 
@@ -183,6 +188,7 @@ An early bug was that typing `"amul"` matched "Domex Multi-Purpose" because the 
 - If you search `"dairy"`, products tagged with "dairy" appear
 - This catches semantic matches where the word isn't in the product name
 - Gets the lowest score — it's a supporting signal, not the main driver
+- **Multi-word protection:** Same `minimum_should_match: "60%"` rule applies here too, so a broad tag like "masala" alone can't pull in unrelated products when the query has multiple words.
 
 ---
 
@@ -240,6 +246,105 @@ Browser renders the product cards
 ```
 
 **What does NOT come back:** Domex Multi-Purpose Disinfectant (even though the letters "mul" appear inside "Multi"). The typo-check compares against full words, so "Multi" ≠ "amul".
+
+---
+
+## Search Method 1b — The Autosuggest Dropdown
+
+**What it is:** The live suggestion list that drops down as you type in the search bar.
+
+**What the user does:** Types 2 or more characters — suggestions appear within 150ms.
+
+**What they expect:** Clicking a suggestion gives immediately relevant results — not a jumble of loosely related products.
+
+### How it works
+
+The autosuggest runs **in parallel** with the main search, but faster. Two separate timers fire on every keystroke:
+
+| Timer | Delay | What it does |
+|---|---|---|
+| Suggestion timer | 150ms | Calls `GET /suggest?q=...` → updates the dropdown |
+| Search timer | 300ms | Calls `GET /search?q=...` → updates the product grid |
+
+The suggestion endpoint returns up to **7 results**, each with name, brand, and category. These are powered by the same edge n-gram prefix index described in Strategy 3 — the tokens are pre-built at index time, so lookups are near-instant.
+
+The dropdown shows:
+- Product name with your typed characters **bolded**
+- A colour-coded category badge (blue = Dairy, orange = Snacks, etc.)
+
+### What clicking a suggestion does — Blinkit/Zepto style
+
+This is the key difference from a basic search box. When you click "Maggi Masala Noodles 70g":
+
+```
+User clicks suggestion
+        │
+        ▼
+Search bar fills with: "Maggi Masala Noodles 70g"
+        │
+        ▼
+Category filter silently applied: "Noodles & Pasta"
+        │
+        ▼
+One unified search fires:
+  q="Maggi Masala Noodles 70g" + category="Noodles & Pasta"
+        │
+        ▼
+Results: Maggi noodle variants first,
+         then similar products in that category
+        │
+        ▼
+"Noodles & Pasta" chip appears in the filter sidebar
+  (user can click × to remove it and widen the scope)
+```
+
+**Why not just search by brand?** Searching "Maggi" (brand only) returns every Maggi product — butter, ketchup, sauces, noodles all mixed together. Scoping by the suggestion's category gives results that match exactly what the user was looking at in the dropdown.
+
+**Why not just use the full product name as a plain text query?** Searching "Maggi Masala Noodles 70g" tokenises into 4 words. Even with `minimum_should_match: "60%"`, a loose match might surface unrelated products. Adding the category filter as a hard gate eliminates the ambiguity entirely.
+
+### The dropdown-stays-open problem (and the fix)
+
+When you type, the 300ms search timer fires and updates the `query` state in the app. React then pushes this back as a new `value` prop to the SearchBar. Without a guard, the `useEffect` watching that prop would close the dropdown every time the main search fired — killing the suggestions while you're still typing.
+
+The fix: a `isTypingRef` flag (a React ref, not state — it doesn't cause re-renders). It's set to `true` on every keystroke, then the `useEffect` checks it and skips the dropdown-close logic if the change came from the user's own typing.
+
+### Flow Diagram
+
+```
+User types "mag" → 150ms pause
+        │
+        ├─► GET /suggest?q=mag
+        │         │
+        │         ▼
+        │   Elasticsearch: prefix match on "mag"
+        │         │
+        │         ▼
+        │   Returns 7 suggestions:
+        │     "Maggi Masala Noodles 70g"  [Noodles & Pasta]
+        │     "Maggi Atta Noodles 75g"    [Noodles & Pasta]
+        │     "Magic Masala Lays 26g"     [Snacks]
+        │     ... (4 more)
+        │         │
+        │         ▼
+        │   Dropdown renders with bold "mag" highlights
+        │
+        └─► GET /search?q=mag (300ms, updates product grid in background)
+
+User clicks "Maggi Masala Noodles 70g"
+        │
+        ▼
+SearchBar: localValue = "Maggi Masala Noodles 70g", dropdown closes
+        │
+        ▼
+App: query = "Maggi Masala Noodles 70g"
+     filters.category = "Noodles & Pasta"
+        │
+        ▼
+GET /search?q=Maggi+Masala+Noodles+70g&category=Noodles+%26+Pasta
+        │
+        ▼
+Results: Maggi noodle variants, highly ranked — no irrelevant products
+```
 
 ---
 
@@ -626,7 +731,8 @@ Sorting does not change **which** products appear — it only changes **their or
 
 ## Pagination
 
-Results come in pages of 20. The page controls at the bottom let users navigate. The backend always knows the total count (`total`) and total number of pages (`total_pages`) and sends them with every response. The frontend just reads these and renders the page buttons — no client-side math needed.
+Results come in pages of 20. The page controls at the bottom let users navigate. The backend always knows the total count (`total`) and total number of pa
+ges (`total_pages`) and sends them with every response. The frontend just reads these and renders the page buttons — no client-side math needed.
 
 ---
 
@@ -646,6 +752,116 @@ Results come in pages of 20. The page controls at the bottom let users navigate.
 
 ---
 
+## Technology Stack — How Each Method Works
+
+This section maps every user action to the exact technology handling it, with a logical explanation of why each piece exists.
+
+---
+
+### Main Search Bar
+
+**Logical flow:**
+```
+Keystroke → React debounce (300ms) → Axios GET /search → FastAPI validates
+→ Elasticsearch bool query (5 strategies) → min_score filter → JSON → React renders cards
+```
+
+| Layer | Technology | Logical explanation |
+|---|---|---|
+| Keystroke capture | React `useState` + `onChange` handler | Every keystroke updates `localValue` instantly (UI feels responsive), but the network call is deferred |
+| Debounce | `setTimeout` (300ms) + `clearTimeout` on every key | Cancels the previous timer each keystroke. Network call only fires after the user pauses 300ms. Typing "amul butter" fires 1 request, not 11 |
+| HTTP call | Axios `GET /search?q=...` | Query string, filters, sort, and page are all sent as URL parameters in one request |
+| Input validation | FastAPI + Pydantic | Every param is type-checked before ES is called. `min_price ≥ 0`, `sort_by` must be one of 4 values, `page_size` capped at 100. Bad input returns 400 without touching the database |
+| Query container | Elasticsearch `bool` query | Groups clauses into `should` (scoring — optional matches that add points) and `filter` (hard rules — mandatory pass/fail). Separating them keeps ranking clean and lets ES cache filters |
+| Exact name match | `term` on `name.keyword` field (boost 3) | Byte-for-byte string comparison. No tokenisation. Useful when the user types a full product name precisely |
+| Typo tolerance | `match` on `name.text` with `fuzziness: "AUTO"`, `prefix_length: 1` (boost 1) | Computes Levenshtein edit distance between query tokens and stored whole words. AUTO = 1 edit for 3–5 char words, 2 for 6+ char words. `prefix_length: 1` means the first letter must be right, preventing wild mismatches |
+| Prefix / autocomplete | `match` on `name` (edge n-gram field) with `autocomplete_search_analyzer` (boost 2) | At index time, "Amul Butter" is stored as ["am","amu","amul","bu","but",…]. At query time, the standard analyzer splits "amul but" into whole words which are matched against those n-gram tokens |
+| Brand match | `term` on `brand` keyword field (boost 2.5) | Exact match on the brand field. Typing "amul" hits all products where `brand = "amul"` — independent of what's in the product name |
+| Tags match | `match` on `tags` text field (boost 0.8) | Standard full-text search over a comma-separated keyword list. Catches semantic matches ("dairy", "protein") not present in product names |
+| Anti-leakage | `minimum_should_match: "60%"` on all `match` clauses | For a 3-word query, at least 2 words must match in the same product. Stops single-token coincidences from surfacing irrelevant results (e.g. "masala" alone pulling Lays when searching "Maggi Masala Noodles") |
+| Score floor | `min_score: 0.5` in the request body | After all clauses score each product, any product below 0.5 total is discarded. Eliminates accidental low-confidence matches |
+| Sort | `sort` array: `_score`, `price`, or `rating` | ES natively sorts documents by a field or computed score. The sort array is ordered — primary sort first, secondary as tiebreaker |
+| Pagination | `from_` (skip offset) + `size` (page size = 20) | ES skips the first N results and returns the next page. Standard offset pagination |
+| Live sidebar counts | Elasticsearch `aggregations` run in the same query | `terms` agg counts documents per unique category/brand value. `range` agg buckets prices. `filter` agg counts in-stock items. All computed in one round-trip — no second query needed |
+
+---
+
+### Autosuggest Dropdown
+
+**Logical flow:**
+```
+Keystroke (2+ chars) → React debounce (150ms) → Axios GET /suggest
+→ FastAPI → Elasticsearch bool/should (n-gram + brand term) → 7 results
+→ dropdown renders → click → App sets query + category filter → unified search
+```
+
+| Layer | Technology | Logical explanation |
+|---|---|---|
+| Faster debounce | `setTimeout` (150ms) separate from the 300ms search timer | Two timers run in parallel on every keystroke. Dropdown at 150ms feels live; main search at 300ms avoids over-fetching. They never interfere with each other |
+| Dropdown guard | `isTypingRef = useRef(false)` | A ref (not state) that tracks whether the value change came from the user typing. When the 300ms search debounce fires and pushes a new `value` prop to SearchBar, `useEffect([value])` would normally close the dropdown. The ref skips that close when the change is internal |
+| Separate endpoint | `GET /suggest?q=...` (not `/search`) | Returns a lightweight payload: just name, brand, category — no aggregations, no full product fields. Keeps the response small and fast |
+| ES query | `bool.should`: `match` on `name` (boost 2) + `term` on `brand` (boost 3) | Two-pronged: the n-gram `match` catches partial words ("mag" → "Maggi"); the brand `term` promotes exact brand matches ("amul" → all Amul products at the top) |
+| Edge n-gram index | `edge_ngram` tokenizer, `min_gram: 2`, `max_gram: 20`, on `name` field | At index time, each product name is pre-tokenised into all its leading character sequences. Stored in an inverted index. Query-time lookup is O(1) — the database does zero scanning |
+| Search analyzer split | `autocomplete_search_analyzer` (standard tokenizer + lowercase filter) | Applied at query time only. Splits "amul but" into ["amul","but"] — whole words — which are then matched against n-gram tokens. Without this, the query itself would be n-grammed, causing over-matching |
+| Result count | `size=7` | Seven suggestions fits naturally in a dropdown without overwhelming the user. Fewer than the full search page (20) |
+| Click: fill bar | `setLocalValue(suggestion.name)` | Shows the full selected product name in the search input |
+| Click: category scope | `setFilters(prev => ({ ...prev, category: suggestion.category }))` | Applies the suggestion's category as a hard filter — same mechanism as clicking a sidebar checkbox. This scopes results to the relevant product type without the user having to do it manually |
+| Click: unified search | `setQuery(suggestion.name)` triggers `useEffect` → `fetchResults` | One search fires with both the name query and the category filter active together |
+| Keyboard navigation | `activeIndex` state + `ArrowUp/Down/Enter/Escape` handlers | Standard combobox accessibility. `onMouseDown` (not `onClick`) on list items prevents the input's `onBlur` from firing before the selection is registered |
+| Result highlighting | `HighlightMatch` component with regex split | Splits the suggestion name by the typed query using a case-insensitive regex, wraps matching segments in `<span className="font-bold">` |
+
+---
+
+### Filter Sidebar
+
+**Logical flow:**
+```
+Click filter checkbox → React merges into filter state → same GET /search with new params
+→ FastAPI → Elasticsearch bool.filter (hard gates) + aggregations → sidebar counts update
+```
+
+| Layer | Technology | Logical explanation |
+|---|---|---|
+| State merge | `setFilters(prev => ({ ...prev, ...newFilter }))` | Spread operator adds or overwrites one filter key without touching the others. Clicking "Dairy" does not reset your price range or in-stock toggle |
+| HTTP request | Same `GET /search` endpoint | Filters are additional URL params. No separate API route needed — the backend handles text + filters in one unified query |
+| ES filter clause | `bool.filter` array (separate from `bool.should`) | Filter clauses are evaluated before scoring. They don't add to relevance score — purely include/exclude. ES can cache filter results across queries, making filtered searches faster than scored ones |
+| Category / Brand | `term` query on `keyword` typed fields | `keyword` fields store values without tokenisation. "Noodles & Pasta" is one token, not three. `term` does exact, case-sensitive comparison |
+| Price range | `range` query with `gte` / `lte` on `float` field | Numeric range query. Elasticsearch stores numeric fields in a BKD tree (a space-efficient structure for range lookups) — `gte 50 and lte 100` resolves in microseconds |
+| Rating floor | `range` query with `gte` on `float` field | Same mechanism. `min_rating: 4` means `rating ≥ 4.0` |
+| In-stock toggle | `term` query on `boolean` field | Boolean fields are stored as 0/1. `term: { in_stock: true }` matches only stocked products |
+| AND logic | All filters inside the same `bool.filter` array | ES applies every clause as a mandatory gate. A product must pass ALL filters. There is no OR between filter types — category AND brand AND price must all pass |
+| Live counts | `terms` aggregation on `category`, `brand` | Computes the count of matching documents per unique field value within the current result set. The sidebar numbers always reflect your active search — not all-time totals |
+| Price distribution | `range` aggregation with custom bucket definitions | Counts products falling into predefined price bands (Under ₹50, ₹50–₹100, etc.). The bucket boundaries are fixed in the backend |
+| In-stock count | `filter` aggregation with `term: { in_stock: true }` | A single-bucket aggregation that counts how many results are in stock. Appears as the number next to the In Stock toggle |
+
+---
+
+### AI Natural Language Bar
+
+**Logical flow:**
+```
+User types sentence → button click → POST /nlsearch → FastAPI
+→ OpenAI GPT-4o (JSON mode, temperature=0) → extract filters dict
+→ same Elasticsearch search as Methods 1+2 → response with extracted field
+→ React shows filter badges + syncs sidebar
+```
+
+| Layer | Technology | Logical explanation |
+|---|---|---|
+| No debounce | Button click (not keypress) triggers request | The NL bar is for deliberate intent — the user types a complete thought and clicks Search. No need for live feedback during typing |
+| HTTP method | `POST /nlsearch` with JSON body `{ "query": "..." }` | Sentences can be long; GET query params have URL length limits. POST body carries the full sentence without truncation |
+| LLM model | OpenAI `chat.completions.create`, `model="gpt-4o"` | GPT-4o is the fast, capable model in the GPT-4 family. Chosen for low latency (typically < 2s) and high instruction-following accuracy |
+| Temperature | `temperature=0` | Makes the model deterministic — the same input always produces the same JSON output. At temperature=0, GPT samples the single highest-probability token at each step. No randomness in filter extraction |
+| JSON mode | `response_format: { type: "json_object" }` | Forces the model to emit only valid JSON. Without this, GPT might prefix the output with "Sure, here's the result:" — breaking `json.loads()` |
+| System prompt | Hardcoded instruction with valid category/value constraints | GPT is told exactly which category names are valid strings and what each phrase maps to (e.g. "under ₹100" → `max_price: 100`). Constrains output to Elasticsearch-compatible values |
+| Timeout | `asyncio.wait_for(llm_call(), timeout=10)` | Python's async timeout. If OpenAI doesn't respond within 10 seconds, the coroutine is cancelled. The except block then activates fallback mode instead of hanging the user |
+| Fallback | `search_text = original_query`, all filters set to null | Treats the full sentence as a plain keyword search. A `fallback_used: true` flag in the JSON response triggers a yellow "Fallback mode" badge on the frontend |
+| Filter merge | `handleNLFiltersExtracted` writes to `query` and `filters` React state | Both update in the same React render cycle. One `useEffect` fires and one unified search runs — not two separate searches |
+| Badge display | `NLFilterBar` maps over `extracted.filters` | Renders each non-null filter as a removable chip. The user sees exactly what GPT understood — transparent AI |
+| Sidebar sync | `FilterPanel` reads from the same `filters` state | The sidebar automatically reflects AI-extracted values. No extra wiring — it reads the same state the NL bar just wrote |
+
+---
+
 ## Glossary — Terms Explained Simply
 
 | Term | Plain English |
@@ -661,3 +877,11 @@ Results come in pages of 20. The page controls at the bottom let users navigate.
 | **GPT-4o** | OpenAI's fast, intelligent AI model. Used here only to translate a sentence into a JSON structure. It doesn't do the actual searching. |
 | **min_score** | A quality cutoff. Products with a relevance score below 0.5 are dropped from results entirely. Prevents junk matches. |
 | **Autocomplete** | The ability to find products when you've only typed the beginning of a word. "am" finds "Amul". |
+| **Edge n-gram** | A technique for breaking a word into all its leading character sequences at index time. "Amul" → ["am","amu","amul"]. Makes prefix search instant because the work is done upfront, not at search time. |
+| **minimum_should_match** | An Elasticsearch rule that says "at least X% of the typed words must appear in the same product". Set to 60% here. For a 3-word query, 2 words must match. Prevents single shared words from pulling in unrelated products. |
+| **Category scoping** | When you click an autosuggest suggestion, the app silently applies the product's category as a filter alongside the text query. Results are restricted to that category — the same behaviour Blinkit and Zepto use. The user can remove the category chip in the sidebar to widen scope. |
+| **isTypingRef** | A React ref (not state) used as a flag to track whether a value change in the search bar came from the user typing or from an external source (like the NL bar). Prevents the dropdown from closing while the user is still typing. |
+| **bool.filter vs bool.should** | In Elasticsearch, `filter` clauses are hard gates (pass/fail, no score contribution); `should` clauses are optional matches that add to the relevance score. Filters are also cached by ES for better performance. |
+| **temperature=0** | An OpenAI parameter that makes the AI model deterministic — the same input always produces the same output. At 0, the model picks the single most likely next word at every step, with no randomness. Used here so filter extraction is consistent and predictable. |
+| **Inverted index** | The core data structure inside Elasticsearch. Instead of "document → words", it stores "word → list of documents containing it". Looking up which products contain "amul" is O(1) — like looking up a word in a book's index rather than reading every page. |
+| **Levenshtein distance** | The number of single-character edits (insert, delete, replace) needed to turn one word into another. "amull" → "amul" = 1 edit (delete one "l"). Used by the typo-tolerance strategy to measure how close a misspelling is to a real product name. |
