@@ -27,7 +27,7 @@ function HighlightMatch({ text, query }) {
   )
 }
 
-export default function SearchBar({ value, onChange, isLoading, total }) {
+export default function SearchBar({ value, onChange, onSuggestionSelect, isLoading, total }) {
   const [localValue, setLocalValue]     = useState(value || '')
   const [suggestions, setSuggestions]   = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
@@ -95,16 +95,17 @@ export default function SearchBar({ value, onChange, isLoading, total }) {
   }
 
   // Commit a selected suggestion immediately (no debounce wait).
-  // Search by brand so multi-word product names don't bleed into irrelevant token matches.
+  // Shows the product name in the bar and delegates to onSuggestionSelect so
+  // App can apply both the query and the category filter together — same as
+  // how Blinkit / Zepto scope results when you pick from autocomplete.
   const commitSuggestion = (suggestion) => {
-    const searchTerm = suggestion.brand || suggestion.name
     clearTimeout(searchDebounceRef.current)
     clearTimeout(suggestDebounceRef.current)
-    setLocalValue(searchTerm)
+    setLocalValue(suggestion.name)
     setSuggestions([])
     setShowDropdown(false)
     setActiveIndex(-1)
-    onChange(searchTerm)
+    onSuggestionSelect(suggestion)
     inputRef.current?.focus()
   }
 

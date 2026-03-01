@@ -65,6 +65,15 @@ export default function App() {
     setPage(1)
   }
 
+  // Called when user clicks (or keyboard-selects) an autosuggest item.
+  // Sets the search text to the product name and scopes results to that
+  // category — same behaviour as Blinkit / Zepto.
+  const handleSuggestionSelect = (suggestion) => {
+    setQuery(suggestion.name)
+    setFilters(prev => ({ ...prev, category: suggestion.category }))
+    setPage(1)
+  }
+
   const handleFilterChange = (newFilter) => {
     setFilters((prev) => ({ ...prev, ...newFilter }))
     setPage(1)
@@ -150,6 +159,7 @@ export default function App() {
             <SearchBar
               value={query}
               onChange={handleQueryChange}
+              onSuggestionSelect={handleSuggestionSelect}
               isLoading={isLoading}
               total={total}
             />
