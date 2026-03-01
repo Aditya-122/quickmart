@@ -21,7 +21,7 @@ def get_es_client() -> AsyncElasticsearch:
                 host_only += f":{parsed.port}"
             _client = AsyncElasticsearch(
                 hosts=[host_only],
-                basic_auth=(parsed.username, parsed.password),
+                http_auth=(parsed.username, parsed.password),  # v7 param (basic_auth is v8 only)
                 request_timeout=30,
                 retry_on_timeout=True,
                 max_retries=3,
