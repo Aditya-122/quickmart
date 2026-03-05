@@ -167,7 +167,7 @@ export default function SearchBar({ value, onChange, onSuggestionSelect, isLoadi
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
           placeholder="Search for milk, chips, shampoo..."
-          className="flex-1 py-3.5 px-2 text-base text-gray-800 placeholder-gray-400 outline-none bg-transparent"
+          className="flex-1 py-4 px-2 text-base text-gray-800 placeholder-gray-400 outline-none bg-transparent"
           aria-label="Product search"
           aria-autocomplete="list"
           aria-expanded={dropdownOpen}
