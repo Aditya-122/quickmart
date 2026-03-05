@@ -149,7 +149,7 @@ export default function SearchBar({ value, onChange, onSuggestionSelect, isLoadi
       {/* ── Input ─────────────────────────────────────── */}
       <div
         className={`flex items-center bg-white border-2 border-green-500 shadow-md overflow-visible transition-all focus-within:shadow-lg ${
-          dropdownOpen ? 'rounded-t-2xl' : 'rounded-2xl'
+          dropdownOpen ? 'rounded-t-2xl rounded-b-none' : 'rounded-2xl'
         }`}
       >
         <div className="pl-4 pr-2 text-gray-400 flex-shrink-0">
@@ -199,15 +199,14 @@ export default function SearchBar({ value, onChange, onSuggestionSelect, isLoadi
 
       {/* ── Suggestion dropdown ───────────────────────── */}
       {dropdownOpen && (
-        <div className="absolute top-full left-0 right-0 z-40 bg-white border-2 border-t border-green-500 border-t-gray-100 rounded-b-2xl shadow-xl overflow-hidden">
+        <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 border-t-0 rounded-b-2xl shadow-2xl overflow-hidden">
           <ul role="listbox" aria-label="Search suggestions">
             {suggestions.map((s, i) => (
               <li key={`${s.name}-${i}`} role="option" aria-selected={i === activeIndex}>
                 <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                     i === activeIndex ? 'bg-green-50' : 'hover:bg-gray-50'
                   }`}
-                  // onMouseDown prevents the input's blur from firing before click registers
                   onMouseDown={(e) => { e.preventDefault(); commitSuggestion(s) }}
                   onMouseEnter={() => setActiveIndex(i)}
                 >
@@ -217,34 +216,47 @@ export default function SearchBar({ value, onChange, onSuggestionSelect, isLoadi
                       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
 
-                  {/* Product name with match highlighted */}
-                  <span className="flex-1 text-sm truncate">
-                    <HighlightMatch text={s.name} query={localValue} />
-                  </span>
+                  {/* Two-line layout: full name on line 1, brand · category on line 2 */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 truncate leading-snug">
+                      <HighlightMatch text={s.name} query={localValue} />
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[11px] text-gray-400 truncate">{s.brand}</span>
+                      <span className="text-gray-300 text-[11px] flex-shrink-0">·</span>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${
+                        CATEGORY_COLORS[s.category] || 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {s.category}
+                      </span>
+                    </div>
+                  </div>
 
-                  {/* Category badge */}
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md flex-shrink-0 ${
-                    CATEGORY_COLORS[s.category] || 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {s.category}
-                  </span>
+                  {/* Arrow */}
+                  <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
-
-                {i < suggestions.length - 1 && (
-                  <div className="border-t border-gray-50 mx-4" />
-                )}
               </li>
             ))}
           </ul>
 
           {/* Footer hint */}
-          <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 flex items-center gap-1.5 text-[10px] text-gray-400">
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px]">↑↓</kbd>
-            navigate &nbsp;·&nbsp;
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px]">↵</kbd>
-            select &nbsp;·&nbsp;
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px]">Esc</kbd>
-            close
+          <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 flex items-center gap-2 text-[10px] text-gray-400 flex-wrap">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono">↑↓</kbd>
+              navigate
+            </span>
+            <span className="text-gray-300">·</span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono">↵</kbd>
+              select
+            </span>
+            <span className="text-gray-300">·</span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono">Esc</kbd>
+              close
+            </span>
           </div>
         </div>
       )}
