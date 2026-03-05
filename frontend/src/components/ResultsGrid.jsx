@@ -30,7 +30,7 @@ function getPageNumbers(current, total) {
 function SkeletonCard() {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
-      <div className="h-40 bg-gray-100" />
+      <div className="h-36 sm:h-40 bg-gray-100" />
       <div className="p-3 space-y-2.5">
         <div className="h-3 bg-gray-200 rounded-md w-1/2" />
         <div className="h-4 bg-gray-200 rounded-md w-3/4" />

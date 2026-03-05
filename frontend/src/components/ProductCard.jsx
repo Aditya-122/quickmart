@@ -89,7 +89,7 @@ export default function ProductCard({ product }) {
   return (
     <div className="product-card-hover bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
       {/* Image area */}
-      <div className={`relative bg-gradient-to-br ${categoryBg} flex items-center justify-center h-40 flex-shrink-0`}>
+      <div className={`relative bg-gradient-to-br ${categoryBg} flex items-center justify-center h-36 sm:h-40 flex-shrink-0`}>
 
         {/* Wishlist */}
         <button

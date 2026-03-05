@@ -2,12 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSuggestions } from '../api/search'
 
 const CATEGORY_COLORS = {
-  'Dairy':               'bg-blue-50 text-blue-600',
-  'Snacks':              'bg-orange-50 text-orange-600',
-  'Beverages':           'bg-purple-50 text-purple-600',
-  'Fruits & Vegetables': 'bg-green-50 text-green-600',
-  'Personal Care':       'bg-pink-50 text-pink-600',
-  'Household':           'bg-gray-100 text-gray-600',
+  'Dairy':                'bg-blue-50 text-blue-600',
+  'Snacks':               'bg-orange-50 text-orange-600',
+  'Beverages':            'bg-purple-50 text-purple-600',
+  'Fruits & Vegetables':  'bg-green-50 text-green-600',
+  'Personal Care':        'bg-pink-50 text-pink-600',
+  'Household':            'bg-gray-100 text-gray-600',
+  'Breakfast & Cereals':  'bg-yellow-50 text-yellow-700',
+  'Biscuits & Cookies':   'bg-amber-50 text-amber-700',
+  'Chocolates & Candies': 'bg-rose-50 text-rose-600',
+  'Noodles & Pasta':      'bg-red-50 text-red-600',
+  'Spices & Masalas':     'bg-orange-50 text-orange-800',
 }
 
 // Bolds every occurrence of `query` inside `text`, case-insensitive.
@@ -27,7 +32,7 @@ function HighlightMatch({ text, query }) {
   )
 }
 
-export default function SearchBar({ value, onChange, onSuggestionSelect, isLoading, total }) {
+export default function SearchBar({ value, onChange, onSuggestionSelect, isLoading }) {
   const [localValue, setLocalValue]     = useState(value || '')
   const [suggestions, setSuggestions]   = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
@@ -244,14 +249,6 @@ export default function SearchBar({ value, onChange, onSuggestionSelect, isLoadi
         </div>
       )}
 
-      {/* Result count (only when dropdown is closed) */}
-      {total != null && !dropdownOpen && (
-        <p className="mt-2 text-sm text-gray-500 pl-1">
-          {total === 0
-            ? 'No products found'
-            : `${total.toLocaleString()} product${total !== 1 ? 's' : ''} found`}
-        </p>
-      )}
     </div>
   )
 }
