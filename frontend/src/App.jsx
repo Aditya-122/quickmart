@@ -19,6 +19,7 @@ export default function App() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [sortBy, setSortBy] = useState('relevance')
   const [page, setPage] = useState(1)
+  const [filterOpen, setFilterOpen] = useState(false)
   const PAGE_SIZE = 20
 
   const [products, setProducts] = useState([])
@@ -165,17 +166,17 @@ export default function App() {
             />
           </div>
 
-          {/* Sign In */}
-          <button className="hidden sm:flex flex-shrink-0 items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-green-600 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors border border-gray-200">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Sign In — icon only on mobile */}
+          <button className="flex-shrink-0 flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-green-600 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-gray-50 transition-colors sm:border sm:border-gray-200">
+            <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            Sign In
+            <span className="hidden sm:inline">Sign In</span>
           </button>
 
           {/* Cart */}
-          <button className="flex-shrink-0 flex items-center gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-4 py-2.5 rounded-xl transition-colors shadow-sm font-semibold">
+          <button className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-3 sm:px-4 py-2.5 rounded-xl transition-colors shadow-sm font-semibold">
             <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -189,18 +190,120 @@ export default function App() {
       </header>
 
       {/* ── Main ─────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
-        <div className="mb-6">
+      <main className="max-w-7xl mx-auto px-4 py-4 md:py-6 flex-1 w-full">
+        <div className="mb-4">
           <NLFilterBar onFiltersExtracted={handleNLFiltersExtracted} />
         </div>
 
+        {/* ── Mobile: filter button + active chips strip ── */}
+        <div className="flex md:hidden items-center gap-2 mb-4 overflow-x-auto pb-1 -mx-4 px-4">
+          <button
+            onClick={() => setFilterOpen(true)}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm active:bg-gray-50"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filters
+            {[filters.category, filters.brand, filters.min_price, filters.max_price, filters.min_rating, filters.in_stock].filter(v => v != null).length > 0 && (
+              <span className="w-4 h-4 bg-green-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {[filters.category, filters.brand, filters.min_price, filters.max_price, filters.min_rating, filters.in_stock].filter(v => v != null).length}
+              </span>
+            )}
+          </button>
+
+          {filters.category && (
+            <button onClick={() => handleFilterChange({ category: null })}
+              className="flex-shrink-0 flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap">
+              {filters.category}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+          {filters.brand && (
+            <button onClick={() => handleFilterChange({ brand: null })}
+              className="flex-shrink-0 flex items-center gap-1 text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap">
+              {filters.brand}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+          {(filters.min_price != null || filters.max_price != null) && (
+            <button onClick={() => handleFilterChange({ min_price: null, max_price: null })}
+              className="flex-shrink-0 flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap">
+              ₹{filters.min_price ?? 0}–{filters.max_price ?? '600+'}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+          {filters.min_rating != null && (
+            <button onClick={() => handleFilterChange({ min_rating: null })}
+              className="flex-shrink-0 flex items-center gap-1 text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap">
+              {filters.min_rating}★ & above
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+          {filters.in_stock && (
+            <button onClick={() => handleFilterChange({ in_stock: null })}
+              className="flex-shrink-0 flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap">
+              In Stock
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
+
+        {/* ── Mobile filter bottom drawer ── */}
+        {filterOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setFilterOpen(false)} />
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col">
+              {/* Drawer handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              </div>
+              {/* Drawer header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                <h2 className="text-base font-bold text-gray-900">Filters</h2>
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {/* Scrollable filter content */}
+              <div className="overflow-y-auto px-5 pb-4">
+                <FilterPanel
+                  aggregations={aggregations}
+                  filters={filters}
+                  onChange={handleFilterChange}
+                  onReset={() => { handleFilterReset(); setFilterOpen(false) }}
+                  isMobile
+                />
+              </div>
+              {/* Done button */}
+              <div className="px-5 pb-6 pt-2 border-t border-gray-100">
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-colors"
+                >
+                  Show Results
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-6 items-start">
-          <FilterPanel
-            aggregations={aggregations}
-            filters={filters}
-            onChange={handleFilterChange}
-            onReset={handleFilterReset}
-          />
+          {/* Desktop sidebar */}
+          <div className="hidden md:block">
+            <FilterPanel
+              aggregations={aggregations}
+              filters={filters}
+              onChange={handleFilterChange}
+              onReset={handleFilterReset}
+            />
+          </div>
           <ResultsGrid
             products={products}
             total={total}

@@ -76,14 +76,15 @@ export default function ResultsGrid({
   return (
     <div className="flex-1 min-w-0">
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <p className="text-sm text-gray-500 min-w-0">
           {isLoading ? (
-            <span className="inline-block w-28 h-4 bg-gray-200 rounded animate-pulse" />
+            <span className="inline-block w-24 h-4 bg-gray-200 rounded animate-pulse" />
           ) : total != null ? (
             <span>
               <span className="font-bold text-gray-900">{total.toLocaleString()}</span>
-              {' '}product{total !== 1 ? 's' : ''} found
+              <span className="hidden sm:inline"> product{total !== 1 ? 's' : ''} found</span>
+              <span className="sm:hidden"> items</span>
             </span>
           ) : null}
         </p>
@@ -91,7 +92,7 @@ export default function ResultsGrid({
         <select
           value={sortBy}
           onChange={(e) => onSortChange(e.target.value)}
-          className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400 cursor-pointer"
+          className="flex-shrink-0 text-sm border border-gray-200 rounded-xl px-2 py-1.5 sm:px-3 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400 cursor-pointer"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -131,15 +132,16 @@ export default function ResultsGrid({
               <button
                 onClick={() => onPageChange(page - 1)}
                 disabled={page <= 1}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Prev
+                <span className="hidden sm:inline">Prev</span>
               </button>
 
-              <div className="flex gap-1">
+              {/* Desktop: full windowed page numbers */}
+              <div className="hidden sm:flex gap-1">
                 {getPageNumbers(page, totalPages).map((p, i) =>
                   p === '...' ? (
                     <span key={`ellipsis-${i}`} className="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">
@@ -161,12 +163,17 @@ export default function ResultsGrid({
                 )}
               </div>
 
+              {/* Mobile: compact page indicator */}
+              <span className="sm:hidden text-sm text-gray-600 font-medium px-3">
+                {page} / {totalPages}
+              </span>
+
               <button
                 onClick={() => onPageChange(page + 1)}
                 disabled={page >= totalPages}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

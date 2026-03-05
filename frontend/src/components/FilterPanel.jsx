@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 const STAR_OPTIONS = [4.5, 4, 3.5, 3]
 
-export default function FilterPanel({ aggregations, filters, onChange, onReset }) {
+export default function FilterPanel({ aggregations, filters, onChange, onReset, isMobile = false }) {
   const [priceRange, setPriceRange] = useState([
     filters.min_price ?? 0,
     filters.max_price ?? 600,
@@ -40,30 +40,36 @@ export default function FilterPanel({ aggregations, filters, onChange, onReset }
   const categories = aggregations?.categories || []
   const brands = aggregations?.brands || []
 
-  return (
-    <aside className="w-60 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit sticky top-20">
+  const asideClass = isMobile
+    ? 'w-full bg-white pt-4'
+    : 'w-60 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit sticky top-20'
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          <h2 className="font-bold text-gray-900 text-sm">Filters</h2>
-        </div>
-        {hasActiveFilters && (
-          <button
-            onClick={onReset}
-            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-semibold transition-colors"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  return (
+    <aside className={asideClass}>
+
+      {/* Header — hidden in mobile drawer (drawer provides its own header) */}
+      {!isMobile && (
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            Reset
-          </button>
-        )}
-      </div>
+            <h2 className="font-bold text-gray-900 text-sm">Filters</h2>
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={onReset}
+              className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-semibold transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Reset
+            </button>
+          )}
+        </div>
+      )}
 
       {/* In Stock */}
       <div className="mb-5">
@@ -239,6 +245,20 @@ export default function FilterPanel({ aggregations, filters, onChange, onReset }
           ))}
         </ul>
       </div>
+
+      {/* Mobile drawer footer */}
+      {isMobile && (
+        <div className="mt-6 flex gap-3">
+          {hasActiveFilters && (
+            <button
+              onClick={onReset}
+              className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Reset All
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   )
 }

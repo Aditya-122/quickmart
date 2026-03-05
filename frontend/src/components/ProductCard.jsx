@@ -7,6 +7,11 @@ const CATEGORY_COLORS = {
   'Fruits & Vegetables': 'bg-green-50 text-green-700',
   'Personal Care': 'bg-pink-50 text-pink-700',
   'Household': 'bg-gray-100 text-gray-600',
+  'Breakfast & Cereals': 'bg-yellow-50 text-yellow-700',
+  'Biscuits & Cookies': 'bg-amber-50 text-amber-700',
+  'Chocolates & Candies': 'bg-rose-50 text-rose-700',
+  'Noodles & Pasta': 'bg-red-50 text-red-700',
+  'Spices & Masalas': 'bg-orange-50 text-orange-800',
 }
 
 const CATEGORY_EMOJI = {
@@ -16,6 +21,11 @@ const CATEGORY_EMOJI = {
   'Fruits & Vegetables': '🥦',
   'Personal Care': '🧴',
   'Household': '🏠',
+  'Breakfast & Cereals': '🥣',
+  'Biscuits & Cookies': '🍪',
+  'Chocolates & Candies': '🍫',
+  'Noodles & Pasta': '🍜',
+  'Spices & Masalas': '🌶️',
 }
 
 const CATEGORY_BG = {
@@ -25,6 +35,11 @@ const CATEGORY_BG = {
   'Fruits & Vegetables': 'from-green-50 to-emerald-50',
   'Personal Care': 'from-pink-50 to-rose-50',
   'Household': 'from-gray-50 to-slate-100',
+  'Breakfast & Cereals': 'from-yellow-50 to-amber-50',
+  'Biscuits & Cookies': 'from-amber-50 to-yellow-50',
+  'Chocolates & Candies': 'from-rose-50 to-pink-50',
+  'Noodles & Pasta': 'from-red-50 to-orange-50',
+  'Spices & Masalas': 'from-orange-50 to-red-50',
 }
 
 function StarRating({ rating }) {
@@ -158,7 +173,7 @@ export default function ProductCard({ product }) {
         {/* Add to cart */}
         <button
           disabled={!in_stock}
-          className={`mt-3 w-full py-2 rounded-xl text-sm font-semibold transition-all ${
+          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
             in_stock
               ? 'bg-green-500 hover:bg-green-600 active:bg-green-700 text-white shadow-sm hover:shadow'
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
