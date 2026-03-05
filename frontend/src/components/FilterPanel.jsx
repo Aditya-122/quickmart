@@ -42,7 +42,7 @@ export default function FilterPanel({ aggregations, filters, onChange, onReset, 
 
   const asideClass = isMobile
     ? 'w-full bg-white pt-4'
-    : 'w-60 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit sticky top-20'
+    : 'w-60 flex-shrink-0 bg-white rounded-2xl shadow-sm p-4 h-fit sticky top-20'
 
   return (
     <aside className={asideClass}>

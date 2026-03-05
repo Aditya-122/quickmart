@@ -106,7 +106,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" style={{ WebkitFontSmoothing: 'antialiased' }}>
+    <div className="min-h-screen bg-[#F5F0E8] flex flex-col" style={{ WebkitFontSmoothing: 'antialiased' }}>
 
       {/* ── Utility bar ─────────────────────────────────── */}
       <div className="bg-gray-900 text-gray-400 text-xs py-1.5 hidden md:block border-b border-gray-800">
@@ -123,7 +123,7 @@ export default function App() {
       </div>
 
       {/* ── Header ──────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-20">
+      <header className="bg-[#F5F0E8] sticky top-0 z-20 pt-2 pb-1">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
 
           {/* Logo */}

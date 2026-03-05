@@ -102,8 +102,8 @@ export default function ResultsGrid({
 
       {/* Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-28 text-center">
@@ -120,7 +120,7 @@ export default function ResultsGrid({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

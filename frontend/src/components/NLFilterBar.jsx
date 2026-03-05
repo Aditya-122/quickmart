@@ -45,7 +45,7 @@ export default function NLFilterBar({ onFiltersExtracted }) {
   const badges = lastExtracted ? renderFilterBadges(lastExtracted.filters) : []
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-4 pb-3">
         <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
